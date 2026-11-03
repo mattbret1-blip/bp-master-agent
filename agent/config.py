@@ -27,6 +27,10 @@ class Settings:
     openai_model: str | None = None
     anthropic_model: str | None = None
     gemini_model: str | None = None
+    voice_provider: str = "openai"
+    openai_stt_model: str | None = None
+    openai_tts_model: str | None = None
+    openai_tts_voice: str | None = None
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -47,11 +51,24 @@ class Settings:
             openai_model=os.getenv("OPENAI_MODEL") or None,
             anthropic_model=os.getenv("ANTHROPIC_MODEL") or None,
             gemini_model=os.getenv("GEMINI_MODEL") or None,
+            voice_provider=os.getenv("VOICE_PROVIDER", "openai").strip().lower(),
+            openai_stt_model=os.getenv("OPENAI_STT_MODEL") or None,
+            openai_tts_model=os.getenv("OPENAI_TTS_MODEL") or None,
+            openai_tts_voice=os.getenv("OPENAI_TTS_VOICE") or None,
         )
 
     @property
     def data_dir(self) -> Path:
         return Path(self.state_path).parent
+
+    def validate_voice_credentials(self) -> list[str]:
+        """Missing env vars for the configured voice provider (openai only)."""
+        if (self.voice_provider or "openai").strip().lower() != "openai":
+            return [f"VOICE_PROVIDER={self.voice_provider!r} is not supported"]
+        missing = []
+        if not os.getenv("OPENAI_API_KEY"):
+            missing.append("OPENAI_API_KEY")
+        return missing
 
     def validate_provider_credentials(self, provider: str | None = None) -> list[str]:
         provider = provider or self.ai_provider

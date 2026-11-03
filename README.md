@@ -30,10 +30,13 @@ AGENT.md                 Educational constitution / master specification
 ARCHITECTURE.md          System boundaries and design rationale
 main.py                  Local interactive CLI
 agent/                   Core orchestration, state, curriculum, scheduling
+agent/audio.py           Voice-adapter factory (VOICE_PROVIDER) + MIME helper
 agent/specialists.py     True multi-agent team (MULTI_AGENT=true): one
                          structured call per specialist + manager synthesis
 agent/specialist_models.py  Pydantic output schemas for each specialist
+agent/voice.py           AudioAdapter protocol (transcribe / synthesize)
 adapters/                Provider-specific OpenAI / Anthropic / Gemini code
+adapters/openai_voice.py  OpenAI speech-to-text + text-to-speech adapter
 schemas/                 Structured-output JSON schemas
 skills/                  Specialist behavior modules
 data/                    Seed curriculum (data/seeds, committed) and local
@@ -118,6 +121,40 @@ The learner database lives in the persistent `bp_agent_data` volume.
 | `OPENAI_API_KEY` / `OPENAI_MODEL` | OpenAI configuration |
 | `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` | Anthropic configuration |
 | `GEMINI_API_KEY` / `GEMINI_MODEL` | Gemini configuration |
+| `VOICE_PROVIDER` | Voice adapter: `openai` (the only one implemented) |
+| `OPENAI_STT_MODEL` | Speech-to-text model (default `gpt-4o-transcribe`) |
+| `OPENAI_TTS_MODEL` | Text-to-speech model (default `gpt-4o-mini-tts`) |
+| `OPENAI_TTS_VOICE` | TTS voice (default `alloy`) |
+
+## Voice in/out
+
+File-based speech, no live playback: the CLI writes synthesized audio to a
+`.wav` file, and transcription reads an audio file you point it at.
+
+```bash
+# Inside the CLI (python main.py):
+/say Olá, tudo bem?          # writes say-YYYYMMDD-HHMMSS.wav in the working directory
+/transcribe recording.wav    # prints the transcript
+```
+
+Web endpoints (multipart upload for transcription, raw audio bytes back for
+synthesis):
+
+```bash
+curl -F "file=@recording.wav" http://127.0.0.1:8000/voice/transcribe
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"text": "Olá, tudo bem?"}' \
+  http://127.0.0.1:8000/voice/synthesize -o speech.wav
+```
+
+When voice is not configured (no `OPENAI_API_KEY`), the CLI prints a clear
+"Voz indisponível" error and the web endpoints return 503 — the app itself
+keeps running.
+
+**Live-voice status: NOT tested.** No provider API keys exist in this
+environment, so the OpenAI voice adapter has never made a live call. All
+automated voice tests run offline against a fake adapter; live STT/TTS
+verification still awaits real credentials.
 
 ## API
 
@@ -138,6 +175,10 @@ The learner database lives in the persistent `bp_agent_data` volume.
 `POST /api/reset` — reset local learner state
 
 `GET /api/export` — export state + event log
+
+`POST /voice/transcribe` — multipart audio upload → JSON transcript
+
+`POST /voice/synthesize` — JSON `{"text", "voice"?}` → audio/wav bytes
 
 ## Architecture
 
