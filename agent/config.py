@@ -18,6 +18,8 @@ class Settings:
     state_path: str = "data/learner.db"
     max_history_messages: int = 24
     quality_gate: bool = False
+    multi_agent: bool = False
+    cross_validate: bool = False
     research_enabled: bool = False
     local_knowledge_path: str = "data/knowledge"
     app_host: str = "0.0.0.0"
@@ -42,6 +44,8 @@ class Settings:
             state_path=os.getenv("STATE_PATH", "data/learner.db"),
             max_history_messages=int(os.getenv("MAX_HISTORY_MESSAGES", "24")),
             quality_gate=os.getenv("QUALITY_GATE", "false").lower() == "true",
+            multi_agent=os.getenv("MULTI_AGENT", "false").lower() == "true",
+            cross_validate=os.getenv("CROSS_VALIDATE", "false").lower() == "true",
             research_enabled=os.getenv("RESEARCH_ENABLED", "false").lower() == "true",
             local_knowledge_path=os.getenv("LOCAL_KNOWLEDGE_PATH", "data/knowledge"),
             app_host=os.getenv("APP_HOST", "0.0.0.0"),
