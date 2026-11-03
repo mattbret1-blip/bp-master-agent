@@ -3,7 +3,10 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
+from pathlib import Path
 
+from agent.audio import build_audio_adapter, guess_mime_type
 from agent.config import Settings
 from agent.core import BrazilianPortugueseAgent
 from agent.providers import build_adapter
@@ -28,11 +31,38 @@ def print_json(value) -> None:
     print(json.dumps(value, ensure_ascii=False, indent=2))
 
 
-def repl(agent: BrazilianPortugueseAgent) -> int:
+def _get_audio_adapter(audio_adapter, settings):
+    """Lazy voice-adapter resolution so text-only sessions never pay for it.
+
+    Tests inject a fake adapter; production builds the configured one on
+    first voice command and reports a clear error when unconfigured.
+    """
+    if audio_adapter is not None:
+        return audio_adapter
+    return build_audio_adapter(settings)
+
+
+def _cmd_say(text, audio_adapter, settings):
+    adapter = _get_audio_adapter(audio_adapter, settings)
+    audio = adapter.synthesize(text)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    filename = f"say-{stamp}.wav"
+    Path(filename).write_bytes(audio)
+    return filename
+
+
+def _cmd_transcribe(path, audio_adapter, settings):
+    adapter = _get_audio_adapter(audio_adapter, settings)
+    data = Path(path).read_bytes()
+    transcript = adapter.transcribe(data, guess_mime_type(path))
+    return transcript
+
+
+def repl(agent: BrazilianPortugueseAgent, audio_adapter=None, settings=None) -> int:
     opening = agent.opening_diagnostic()
     if opening:
         print(opening)
-    print("\nCommands: /status /next /export /reset /quit")
+    print("\nCommands: /status /next /export /reset /say <text> /transcribe <audio-file> /quit")
     while True:
         try:
             text = input("\nVocê> ").strip()
@@ -58,6 +88,28 @@ def repl(agent: BrazilianPortugueseAgent) -> int:
             opening = agent.opening_diagnostic()
             if opening:
                 print(opening)
+            continue
+        if text.startswith("/say "):
+            spoken = text[len("/say "):].strip()
+            if not spoken:
+                print("Uso: /say <texto>", file=sys.stderr)
+                continue
+            try:
+                filename = _cmd_say(spoken, audio_adapter, settings)
+                print(f"Áudio salvo em: {filename}")
+            except Exception as exc:
+                print(f"Voz indisponível: {exc}", file=sys.stderr)
+            continue
+        if text.startswith("/transcribe "):
+            path = text[len("/transcribe "):].strip()
+            if not path:
+                print("Uso: /transcribe <arquivo-de-áudio>", file=sys.stderr)
+                continue
+            try:
+                transcript = _cmd_transcribe(path, audio_adapter, settings)
+                print(f"Transcrição ({transcript.language}): {transcript.text}")
+            except Exception as exc:
+                print(f"Voz indisponível: {exc}", file=sys.stderr)
             continue
         try:
             print(f"\nAgente> {agent.respond(text)}")

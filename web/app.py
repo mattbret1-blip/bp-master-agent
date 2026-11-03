@@ -4,11 +4,12 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel
 
+from agent.audio import build_audio_adapter, guess_mime_type
 from agent.config import Settings
 from agent.core import BrazilianPortugueseAgent
 from agent.providers import build_adapter
@@ -25,6 +26,11 @@ class ProviderRequest(BaseModel):
     provider: str
 
 
+class SynthesizeRequest(BaseModel):
+    text: str
+    voice: str | None = None
+
+
 def create_app() -> FastAPI:
     settings = Settings.from_env()
     app = FastAPI(title="Brazilian Portuguese Master Agent", version="3.1.0")
@@ -39,6 +45,23 @@ def create_app() -> FastAPI:
         )
 
     agent_holder: dict[str, BrazilianPortugueseAgent] = {}
+    audio_holder: dict[str, object] = {}
+
+    def get_audio_adapter():
+        """Voice adapter, built lazily so voice config never blocks the app.
+
+        Raises RuntimeError when voice is unconfigured; endpoints map that
+        to 503 instead of crashing.
+        """
+        if "audio" not in audio_holder:
+            missing = settings.validate_voice_credentials()
+            if missing:
+                raise RuntimeError(
+                    f"Voice is not configured: missing {', '.join(missing)}. "
+                    "Set them in .env before using voice."
+                )
+            audio_holder["audio"] = build_audio_adapter(settings)
+        return audio_holder["audio"]
 
     def get_agent() -> BrazilianPortugueseAgent:
         if "agent" not in agent_holder:
@@ -131,6 +154,41 @@ def create_app() -> FastAPI:
     @app.get("/api/export")
     def export():
         return get_agent().export()
+
+    @app.post("/voice/transcribe")
+    async def voice_transcribe(file: UploadFile = File(...)):
+        data = await file.read()
+        if not data:
+            raise HTTPException(400, "uploaded audio file is empty")
+        try:
+            adapter = get_audio_adapter()
+        except RuntimeError as exc:
+            raise HTTPException(503, detail=str(exc)) from exc
+        try:
+            transcript = adapter.transcribe(data, file.content_type or guess_mime_type(file.filename or ""))
+        except Exception as exc:
+            raise HTTPException(503, detail=f"Transcription failed: {exc}") from exc
+        return {
+            "text": transcript.text,
+            "language": transcript.language,
+            "confidence": transcript.confidence,
+            "duration_ms": transcript.duration_ms,
+        }
+
+    @app.post("/voice/synthesize")
+    def voice_synthesize(req: SynthesizeRequest):
+        text = req.text.strip()
+        if not text:
+            raise HTTPException(400, "text is required")
+        try:
+            adapter = get_audio_adapter()
+        except RuntimeError as exc:
+            raise HTTPException(503, detail=str(exc)) from exc
+        try:
+            audio = adapter.synthesize(text, req.voice or "default")
+        except Exception as exc:
+            raise HTTPException(503, detail=f"Synthesis failed: {exc}") from exc
+        return Response(content=audio, media_type="audio/wav")
 
     return app
 
