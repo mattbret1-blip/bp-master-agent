@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "brazilian-portuguese-master-agent"
+version = "3.1.0"
+description = "Provider-neutral, stateful Brazilian Portuguese learning agent for OpenAI, Anthropic, and Gemini."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Brazilian Portuguese Master Agent contributors" }]
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn[standard]>=0.30,<1",
+  "openai>=1.0,<3",
+  "anthropic>=0.40,<1",
+  "google-genai>=1.0,<2",
+  "python-dotenv>=1.0,<2",
+  "pydantic>=2,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8,<9",
+  "httpx>=0.27,<1",
+]
+
+[project.scripts]
+bp-agent = "main:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["agent*", "adapters*", "web*"]

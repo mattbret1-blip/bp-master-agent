@@ -1,0 +1,167 @@
+{
+  "nodes": [
+    {
+      "id": "a1_greetings",
+      "label": "Greetings and introductions",
+      "domain": "speaking",
+      "level": "A1",
+      "prerequisites": []
+    },
+    {
+      "id": "a1_ser_estar",
+      "label": "ser vs estar foundations",
+      "domain": "grammar",
+      "level": "A1",
+      "prerequisites": []
+    },
+    {
+      "id": "a1_articles",
+      "label": "Articles, gender, number",
+      "domain": "grammar",
+      "level": "A1",
+      "prerequisites": []
+    },
+    {
+      "id": "a1_present",
+      "label": "Present-tense core verbs",
+      "domain": "grammar",
+      "level": "A1",
+      "prerequisites": [
+        "a1_greetings"
+      ]
+    },
+    {
+      "id": "a2_past",
+      "label": "Past tense and narration",
+      "domain": "grammar",
+      "level": "A2",
+      "prerequisites": [
+        "a1_present"
+      ]
+    },
+    {
+      "id": "a2_pronouns",
+      "label": "Brazilian pronouns and a gente",
+      "domain": "grammar",
+      "level": "A2",
+      "prerequisites": [
+        "a1_greetings"
+      ]
+    },
+    {
+      "id": "a2_connected_speech",
+      "label": "Common connected-speech reductions",
+      "domain": "listening",
+      "level": "A2",
+      "prerequisites": [
+        "a1_present"
+      ]
+    },
+    {
+      "id": "b1_subjunctive",
+      "label": "Subjunctive in high-frequency contexts",
+      "domain": "grammar",
+      "level": "B1",
+      "prerequisites": [
+        "a2_past"
+      ]
+    },
+    {
+      "id": "b1_discourse",
+      "label": "Discourse markers and turn-taking",
+      "domain": "pragmatics",
+      "level": "B1",
+      "prerequisites": [
+        "a2_pronouns"
+      ]
+    },
+    {
+      "id": "b1_professional",
+      "label": "Professional-neutral interaction",
+      "domain": "pragmatics",
+      "level": "B1",
+      "prerequisites": [
+        "a1_greetings"
+      ]
+    },
+    {
+      "id": "b2_aspect",
+      "label": "Tense/aspect nuance",
+      "domain": "grammar",
+      "level": "B2",
+      "prerequisites": [
+        "a2_past",
+        "b1_subjunctive"
+      ]
+    },
+    {
+      "id": "b2_colloquial",
+      "label": "Colloquial grammar and contractions",
+      "domain": "speaking",
+      "level": "B2",
+      "prerequisites": [
+        "a2_connected_speech",
+        "b1_discourse"
+      ]
+    },
+    {
+      "id": "b2_variation",
+      "label": "Regional/social variation interpretation",
+      "domain": "culture",
+      "level": "B2",
+      "prerequisites": [
+        "b1_discourse"
+      ]
+    },
+    {
+      "id": "c1_pragmatics",
+      "label": "Advanced implicature and politeness",
+      "domain": "pragmatics",
+      "level": "C1",
+      "prerequisites": [
+        "b1_discourse",
+        "b1_professional"
+      ]
+    },
+    {
+      "id": "c1_register",
+      "label": "Fine-grained register control",
+      "domain": "pragmatics",
+      "level": "C1",
+      "prerequisites": [
+        "b1_professional",
+        "b2_variation"
+      ]
+    },
+    {
+      "id": "c1_narrative",
+      "label": "Advanced narrative cohesion",
+      "domain": "writing",
+      "level": "C1",
+      "prerequisites": [
+        "a2_past",
+        "b2_aspect"
+      ]
+    },
+    {
+      "id": "c2_metalinguistic",
+      "label": "Metalinguistic analysis of PB variation",
+      "domain": "grammar",
+      "level": "C2",
+      "prerequisites": [
+        "c1_pragmatics",
+        "c1_register"
+      ]
+    },
+    {
+      "id": "c2_culture",
+      "label": "Nuanced cultural and historical interpretation",
+      "domain": "culture",
+      "level": "C2",
+      "prerequisites": [
+        "b2_variation",
+        "c1_pragmatics"
+      ]
+    }
+  ]
+}

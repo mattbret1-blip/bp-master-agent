@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Brazilian Portuguese Master Agent v3</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:900px;margin:0 auto;padding:20px;background:#f4f4f4}
+main{background:#fff;border-radius:16px;padding:20px}
+#chat{min-height:60vh;max-height:70vh;overflow:auto;border:1px solid #ddd;border-radius:12px;padding:12px}
+.msg{margin:10px 0;padding:10px 12px;border-radius:10px;white-space:pre-wrap}
+.user{background:#eef}.bot{background:#efe}
+form{display:flex;gap:8px;margin-top:12px}
+textarea{flex:1;min-height:70px;padding:10px}
+button{padding:10px 14px}
+</style>
+</head>
+<body>
+<main>
+<h1>Brazilian Portuguese Master Agent v3</h1>
+<div id="dashboard"><small id="status">Loading learner state…</small></div><div id="chat"></div>
+<form id="form">
+<textarea id="input" placeholder="Digite sua mensagem..."></textarea>
+<button>Enviar</button>
+</form>
+</main>
+<script>
+const chat=document.getElementById("chat"), form=document.getElementById("form"), input=document.getElementById("input");
+function add(t,c){const d=document.createElement("div");d.className="msg "+c;d.textContent=t;chat.appendChild(d);chat.scrollTop=chat.scrollHeight}
+(async()=>{
+ const s=await (await fetch("/api/status")).json();
+ if((s.current_session?.turn_count||0)===0 && !(s.history||[]).length){
+   const r=await (await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:"__INITIALIZE__"})})).json();
+   if(r.response)add(r.response,"bot");
+ }
+})();
+form.addEventListener("submit",async e=>{
+ e.preventDefault(); const m=input.value.trim(); if(!m)return;
+ add(m,"user"); input.value="";
+ const r=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:m})});
+ const x=await r.json(); add(x.response||"Unable to generate a response.","bot");
+});
+async function refreshStatus(){
+  try{
+    const s=await (await fetch("/api/status")).json();
+    const c=s.learner?.cefr||{};
+    const levels=["listening","speaking","reading","writing"].map(k=>k+":"+((c[k]||{}).level||"—")).join(" · ");
+    const due=(s.learner?.review_queue||[]).length;
+    document.getElementById("status").textContent="CEFR: "+levels+" · Review queue: "+due;
+  }catch(e){}
+}
+setInterval(refreshStatus,5000); refreshStatus();
+</script>
+</body>
+</html>

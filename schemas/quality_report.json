@@ -1,0 +1,32 @@
+{
+  "properties": {
+    "pass_gate": {
+      "title": "Pass Gate",
+      "type": "boolean"
+    },
+    "issues": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Issues",
+      "type": "array"
+    },
+    "revised_response": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Revised Response"
+    }
+  },
+  "required": [
+    "pass_gate"
+  ],
+  "title": "QualityReport",
+  "type": "object"
+}

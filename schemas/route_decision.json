@@ -1,0 +1,93 @@
+{
+  "properties": {
+    "mode": {
+      "enum": [
+        "diagnostic",
+        "lesson",
+        "practice",
+        "conversation",
+        "review",
+        "assessment",
+        "translation",
+        "clarification",
+        "planning",
+        "pause"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "specialists": {
+      "items": {
+        "enum": [
+          "tutor",
+          "linguist",
+          "conversation",
+          "culture",
+          "assessor"
+        ],
+        "type": "string"
+      },
+      "title": "Specialists",
+      "type": "array"
+    },
+    "goal": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Goal"
+    },
+    "obstacle": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Obstacle"
+    },
+    "context": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Context"
+    },
+    "focus": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Focus"
+    },
+    "reason": {
+      "default": "",
+      "title": "Reason",
+      "type": "string"
+    }
+  },
+  "required": [
+    "mode",
+    "specialists"
+  ],
+  "title": "RouteDecision",
+  "type": "object"
+}

@@ -1,0 +1,304 @@
+{
+  "$defs": {
+    "Evidence": {
+      "properties": {
+        "evidence_id": {
+          "default": "",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "domain": {
+          "title": "Domain",
+          "type": "string"
+        },
+        "concept_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Concept Id"
+        },
+        "evidence": {
+          "title": "Evidence",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "Observado",
+            "Inferido",
+            "Não demonstrado",
+            "Não avaliado",
+            "Pendente",
+            "Inconclusivo"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "interpretation": {
+          "default": "",
+          "title": "Interpretation",
+          "type": "string"
+        },
+        "confidence": {
+          "default": 0.5,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "limitation": {
+          "default": "",
+          "title": "Limitation",
+          "type": "string"
+        },
+        "mastery_stage": {
+          "anyOf": [
+            {
+              "enum": [
+                "Recognition",
+                "Recall",
+                "Controlled Production",
+                "Spontaneous Production",
+                "Automaticity"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mastery Stage"
+        },
+        "source": {
+          "default": "conversation",
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "domain",
+        "evidence",
+        "status"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "ReviewItem": {
+      "properties": {
+        "item_id": {
+          "title": "Item Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "vocabulary",
+            "grammar",
+            "pronunciation",
+            "pragmatics",
+            "culture",
+            "error",
+            "mixed"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "prompt": {
+          "title": "Prompt",
+          "type": "string"
+        },
+        "answer_key": {
+          "default": "",
+          "title": "Answer Key",
+          "type": "string"
+        },
+        "due_at": {
+          "title": "Due At",
+          "type": "string"
+        },
+        "interval_days": {
+          "default": 1,
+          "title": "Interval Days",
+          "type": "number"
+        },
+        "ease": {
+          "default": 2.5,
+          "title": "Ease",
+          "type": "number"
+        },
+        "repetitions": {
+          "default": 0,
+          "title": "Repetitions",
+          "type": "integer"
+        },
+        "priority": {
+          "default": "normal",
+          "enum": [
+            "normal",
+            "high"
+          ],
+          "title": "Priority",
+          "type": "string"
+        }
+      },
+      "required": [
+        "item_id",
+        "kind",
+        "prompt",
+        "due_at"
+      ],
+      "title": "ReviewItem",
+      "type": "object"
+    },
+    "StateUpdate": {
+      "properties": {
+        "update_type": {
+          "enum": [
+            "update_goal",
+            "update_context",
+            "update_instruction_language",
+            "update_modality",
+            "add_mastered_candidate",
+            "add_reinforce",
+            "add_recurring_error",
+            "add_vocabulary",
+            "add_review_item",
+            "add_assessment_evidence",
+            "update_competency",
+            "update_cefr"
+          ],
+          "title": "Update Type",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": true,
+          "title": "Payload",
+          "type": "object"
+        }
+      },
+      "required": [
+        "update_type"
+      ],
+      "title": "StateUpdate",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "mode": {
+      "title": "Mode",
+      "type": "string"
+    },
+    "goal": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Goal"
+    },
+    "obstacle": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Obstacle"
+    },
+    "context": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Context"
+    },
+    "focus": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Focus"
+    },
+    "next_action": {
+      "default": "ask_user",
+      "enum": [
+        "ask_user",
+        "teach",
+        "practice",
+        "assess",
+        "converse",
+        "review",
+        "translate",
+        "clarify",
+        "research_needed",
+        "pause",
+        "end"
+      ],
+      "title": "Next Action",
+      "type": "string"
+    },
+    "response": {
+      "title": "Response",
+      "type": "string"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/Evidence"
+      },
+      "title": "Evidence",
+      "type": "array"
+    },
+    "state_updates": {
+      "items": {
+        "$ref": "#/$defs/StateUpdate"
+      },
+      "title": "State Updates",
+      "type": "array"
+    },
+    "review_candidates": {
+      "items": {
+        "$ref": "#/$defs/ReviewItem"
+      },
+      "title": "Review Candidates",
+      "type": "array"
+    },
+    "summary": {
+      "additionalProperties": true,
+      "title": "Summary",
+      "type": "object"
+    },
+    "certainty_note": {
+      "default": "",
+      "title": "Certainty Note",
+      "type": "string"
+    }
+  },
+  "required": [
+    "mode",
+    "response"
+  ],
+  "title": "AgentDecision",
+  "type": "object"
+}
