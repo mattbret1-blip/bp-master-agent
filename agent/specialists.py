@@ -123,7 +123,8 @@ class SpecialistTeam:
             )
         )
 
-    def _synthesize(self, route, state, messages, outputs, mode_skill: str) -> AgentDecision:
+    def _synthesize(self, route, state, messages, outputs, mode_skill: str,
+                    issues=None) -> AgentDecision:
         rendered = {
             name: output.model_dump()
             for name, output in outputs.items()
@@ -135,6 +136,18 @@ class SpecialistTeam:
         ]
         if mode_skill:
             parts.append(f"MODE SKILL:\n{mode_skill}")
+        if issues:
+            parts.append(
+                "VALIDATION ISSUES TO FIX:\n"
+                + json.dumps(
+                    [i.model_dump() if hasattr(i, "model_dump") else i for i in issues],
+                    ensure_ascii=False, indent=2,
+                )
+                + "\nProduce a corrected AgentDecision that resolves these "
+                  "issues. Do not reintroduce dropped evidence or "
+                  "contradictory state updates, and do not claim levels or "
+                  "mastery the evidence does not support."
+            )
         parts.append(
             "Return exactly one AgentDecision JSON. The response field is "
             "learner-facing and must weave the specialists' contributions into "
@@ -171,6 +184,16 @@ class SpecialistTeam:
 
     def run(self, route: RouteDecision, state: dict, user_text: str, history: list) -> AgentDecision:
         """Run the routed specialists, then synthesize one AgentDecision."""
+        decision, _ = self.run_detailed(route, state, user_text, history)
+        return decision
+
+    def run_detailed(self, route: RouteDecision, state: dict, user_text: str,
+                     history: list):
+        """Like :meth:`run`, but also returns the specialist outputs.
+
+        The cross-validation loop needs the outputs to cross-check the
+        synthesized decision against what each specialist actually said.
+        """
         specialists: list[str] = []
         for name in route.specialists:
             if name in SPECIALIST_MODELS and name not in specialists:
@@ -190,4 +213,22 @@ class SpecialistTeam:
             for name in specialists
         }
         decision = self._synthesize(route_dict, state, messages, outputs, mode_skill)
+        return self._merge_assessor_evidence(decision, outputs), outputs
+
+    def resynthesize(self, route: RouteDecision, state: dict, messages: list,
+                     outputs: dict, issues) -> AgentDecision:
+        """Re-run only the manager synthesis, with validation issues in hand.
+
+        Specialists are not re-run: their contributions stand, and the
+        manager repairs the weaving. Assessor evidence is merged again,
+        so a repair cannot silently drop observations.
+        """
+        route_dict = route.model_dump()
+        mode_skill = (
+            self._skill(MODE_SKILLS[route.mode])
+            if route.mode in MODE_SKILLS else ""
+        )
+        decision = self._synthesize(
+            route_dict, state, messages, outputs, mode_skill, issues=issues
+        )
         return self._merge_assessor_evidence(decision, outputs)

@@ -33,6 +33,9 @@ agent/                   Core orchestration, state, curriculum, scheduling
 agent/audio.py           Voice-adapter factory (VOICE_PROVIDER) + MIME helper
 agent/specialists.py     True multi-agent team (MULTI_AGENT=true): one
                          structured call per specialist + manager synthesis
+agent/validation.py      Cross-validation loop (CROSS_VALIDATE=true):
+                         deterministic checks + LLM validation, one bounded
+                         re-synthesis round, validated-subset application
 agent/specialist_models.py  Pydantic output schemas for each specialist
 agent/voice.py           AudioAdapter protocol (transcribe / synthesize)
 adapters/                Provider-specific OpenAI / Anthropic / Gemini code
@@ -114,6 +117,7 @@ The learner database lives in the persistent `bp_agent_data` volume.
 | `MAX_HISTORY_MESSAGES` | Maximum conversational history sent to the model |
 | `QUALITY_GATE` | Enable the independent quality pass |
 | `MULTI_AGENT` | `true` routes each turn through `SpecialistTeam` (one structured call per routed specialist + manager synthesis); default `false` keeps the original single-call path |
+| `CROSS_VALIDATE` | `true` enables the cross-validation loop, but only on the multi-agent path (`MULTI_AGENT=true`); default `false` leaves behavior unchanged |
 | `RESEARCH_ENABLED` | Enable the bundled local-knowledge research adapter |
 | `LOCAL_KNOWLEDGE_PATH` | Local research source directory |
 | `APP_HOST` / `APP_PORT` | Server binding |
@@ -155,6 +159,47 @@ keeps running.
 environment, so the OpenAI voice adapter has never made a live call. All
 automated voice tests run offline against a fake adapter; live STT/TTS
 verification still awaits real credentials.
+
+## Cross-validation loop
+
+With `MULTI_AGENT=true` and `CROSS_VALIDATE=true`, every turn runs a
+synthesize → cross-validate → revalidate loop between the manager's
+synthesis and state application:
+
+1. **Deterministic checks (app code, no model):** evidence must reference
+   a known competency; CEFR proposals must name a real domain and level;
+   one turn must not claim mastery of a concept it also flags as a
+   recurring error; response prose must not claim a CEFR level or mastery
+   the decision's own evidence does not support.
+2. **LLM validation call:** one structured call cross-checking the
+   specialist contributions against each other and against the learner's
+   evidence record, returning a verdict (`pass` / `fixable` / `reject`)
+   and issues with severities.
+3. **One bounded re-synthesis round:** if the verdict is `fixable` and
+   issues remain, the manager repairs the decision with the issues in
+   hand (specialists are not re-run). Maximum 2 synthesis rounds total,
+   then the loop stops whatever the state.
+4. **Validated subset only:** invalid evidence items and contradictory
+   state updates are dropped — never applied — and logged as a
+   `validation` database event naming exactly what was dropped and why.
+   A `reject` verdict drops all recordable claims while keeping the
+   learner-facing response. A compact summary (rounds used, verdict,
+   issues found, dropped items) is included in the agent's status output
+   (`GET /api/status`, CLI `/status`) so comprehension evaluation stays
+   inspectable.
+5. **Fallback:** if the validation call itself fails, the turn proceeds
+   with the pre-validation decision and a `validation_fallback` event is
+   logged. A validation outage never breaks a tutoring turn.
+
+Validated evidence still flows through the existing evidence and CEFR
+gates in `agent/core.py` — validation can only make recording stricter,
+never looser. With either flag off, behavior is exactly the previous
+behavior.
+
+**Live-provider status: NOT tested.** No provider API keys exist in this
+environment, so the validation LLM call has never run against a live
+provider. All automated cross-validation tests run offline against a
+fake adapter.
 
 ## API
 

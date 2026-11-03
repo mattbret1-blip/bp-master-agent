@@ -8,6 +8,7 @@ from .scheduler import due_items
 from .prompts import route_prompt, specialist_prompt
 from .specialists import SpecialistTeam
 from .quality import run_quality_gate
+from .validation import CrossValidator, run_validation_loop
 from .research import DisabledResearchAdapter, LocalKnowledgeAdapter
 
 INITIAL_OPENING = (
@@ -38,6 +39,13 @@ class BrazilianPortugueseAgent:
         # call per specialist + manager synthesis). Default false keeps
         # the original single-call path.
         self.multi_agent = os.getenv("MULTI_AGENT","false").lower() == "true"
+        # CROSS_VALIDATE=true enables the synthesize + cross-validate +
+        # revalidate loop, but only on the multi-agent path. Default off:
+        # with either flag off, behavior is exactly the previous behavior.
+        self.cross_validate = os.getenv("CROSS_VALIDATE","false").lower() == "true"
+        # Compact summary of the most recent validation run (None when
+        # the loop has never run); surfaced via status().
+        self.last_validation = None
         self.research_adapter = research_adapter or DisabledResearchAdapter()
         self.state.learner.competencies = hydrate(self.state.learner.competencies)
         self.db.save_state(self.state)
@@ -78,12 +86,39 @@ class BrazilianPortugueseAgent:
         )
 
         if self.multi_agent:
-            decision = SpecialistTeam(
+            team = SpecialistTeam(
                 self.adapter, self.agent_md, self.project_root
-            ).run(
-                route, context, user_text,
-                self.state.history[-self.max_history:],
             )
+            history = self.state.history[-self.max_history:]
+            decision, outputs = team.run_detailed(
+                route, context, user_text, history,
+            )
+            if self.cross_validate:
+                # Validate AFTER synthesis, BEFORE state application.
+                # A validation outage falls back to the pre-validation
+                # decision and is logged — it never breaks the turn.
+                try:
+                    decision, summary = run_validation_loop(
+                        CrossValidator(self.adapter, self.agent_md),
+                        team, route, context,
+                        list(history) + [{"role": "user", "content": user_text}],
+                        decision, outputs,
+                        self.state.learner.competencies,
+                    )
+                except Exception as exc:
+                    summary = {
+                        "enabled": True,
+                        "rounds_used": 0,
+                        "verdict": "fallback",
+                        "issues_found": 0,
+                        "dropped_evidence": [],
+                        "dropped_updates": [],
+                        "fallback": True,
+                        "error": str(exc)[:200],
+                    }
+                    self.db.event("validation_fallback", {"error": str(exc)[:500]})
+                self.last_validation = summary
+                self.db.event("validation", summary)
         else:
             decision = AgentDecision.model_validate(
                 self.adapter.generate_structured(
@@ -293,7 +328,11 @@ class BrazilianPortugueseAgent:
         return {"action":"assessment","reason":"No immediate prerequisite-compatible gap dominates."}
 
     def status(self):
-        return self.state.model_dump()
+        data = self.state.model_dump()
+        # Compact validation summary (None when the loop has never run),
+        # so comprehension evaluation stays inspectable from the API/CLI.
+        data["validation"] = self.last_validation
+        return data
 
     def export(self):
         return self.db.export_json()
