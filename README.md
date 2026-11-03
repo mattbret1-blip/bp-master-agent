@@ -61,6 +61,10 @@ docker-compose.yml       Local persistent container deployment
 
 Requires Python 3.11+.
 
+Windows users: see [WINDOWS_SETUP.md](WINDOWS_SETUP.md) — it covers
+Python/Git setup, `setup.bat` / `run.bat`, and the `.env` key + model
+configuration for a full-featured local run.
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate
